@@ -45,16 +45,16 @@
 #include "camera_pins.h"
 
 /*
-Next one is an include with wifi credentials.
-This is what you need to do:
+  Next one is an include with wifi credentials.
+  This is what you need to do:
 
-1. Create a file called "home_wifi_multi.h" in the same folder   OR   under a separate subfolder of the "libraries" folder of Arduino IDE. (You are creating a "fake" library really - I called it "MySettings"). 
-2. Place the following text in the file:
-#define SSID1 "replace with your wifi ssid"
-#define PWD1 "replace your wifi password"
-3. Save.
+  1. Create a file called "home_wifi_multi.h" in the same folder   OR   under a separate subfolder of the "libraries" folder of Arduino IDE. (You are creating a "fake" library really - I called it "MySettings").
+  2. Place the following text in the file:
+  #define SSID1 "replace with your wifi ssid"
+  #define PWD1 "replace your wifi password"
+  3. Save.
 
-Should work then
+  Should work then
 */
 #include "home_wifi_multi.h"
 
@@ -395,35 +395,35 @@ void setup()
 
 
   // Configure the camera
-//  camera_config_t config;
-//  config.ledc_channel = LEDC_CHANNEL_0;
-//  config.ledc_timer = LEDC_TIMER_0;
-//  config.pin_d0 = Y2_GPIO_NUM;
-//  config.pin_d1 = Y3_GPIO_NUM;
-//  config.pin_d2 = Y4_GPIO_NUM;
-//  config.pin_d3 = Y5_GPIO_NUM;
-//  config.pin_d4 = Y6_GPIO_NUM;
-//  config.pin_d5 = Y7_GPIO_NUM;
-//  config.pin_d6 = Y8_GPIO_NUM;
-//  config.pin_d7 = Y9_GPIO_NUM;
-//  config.pin_xclk = XCLK_GPIO_NUM;
-//  config.pin_pclk = PCLK_GPIO_NUM;
-//  config.pin_vsync = VSYNC_GPIO_NUM;
-//  config.pin_href = HREF_GPIO_NUM;
-//  config.pin_sscb_sda = SIOD_GPIO_NUM;
-//  config.pin_sscb_scl = SIOC_GPIO_NUM;
-//  config.pin_pwdn = PWDN_GPIO_NUM;
-//  config.pin_reset = RESET_GPIO_NUM;
-//  config.xclk_freq_hz = 20000000;
-//  config.pixel_format = PIXFORMAT_JPEG;
-//
-//  // Frame parameters: pick one
-//  //  config.frame_size = FRAMESIZE_UXGA;
-//  //  config.frame_size = FRAMESIZE_SVGA;
-//  //  config.frame_size = FRAMESIZE_QVGA;
-//  config.frame_size = FRAMESIZE_VGA;
-//  config.jpeg_quality = 12;
-//  config.fb_count = 2;
+  //  camera_config_t config;
+  //  config.ledc_channel = LEDC_CHANNEL_0;
+  //  config.ledc_timer = LEDC_TIMER_0;
+  //  config.pin_d0 = Y2_GPIO_NUM;
+  //  config.pin_d1 = Y3_GPIO_NUM;
+  //  config.pin_d2 = Y4_GPIO_NUM;
+  //  config.pin_d3 = Y5_GPIO_NUM;
+  //  config.pin_d4 = Y6_GPIO_NUM;
+  //  config.pin_d5 = Y7_GPIO_NUM;
+  //  config.pin_d6 = Y8_GPIO_NUM;
+  //  config.pin_d7 = Y9_GPIO_NUM;
+  //  config.pin_xclk = XCLK_GPIO_NUM;
+  //  config.pin_pclk = PCLK_GPIO_NUM;
+  //  config.pin_vsync = VSYNC_GPIO_NUM;
+  //  config.pin_href = HREF_GPIO_NUM;
+  //  config.pin_sscb_sda = SIOD_GPIO_NUM;
+  //  config.pin_sscb_scl = SIOC_GPIO_NUM;
+  //  config.pin_pwdn = PWDN_GPIO_NUM;
+  //  config.pin_reset = RESET_GPIO_NUM;
+  //  config.xclk_freq_hz = 20000000;
+  //  config.pixel_format = PIXFORMAT_JPEG;
+  //
+  //  // Frame parameters: pick one
+  //  //  config.frame_size = FRAMESIZE_UXGA;
+  //  //  config.frame_size = FRAMESIZE_SVGA;
+  //  //  config.frame_size = FRAMESIZE_QVGA;
+  //  config.frame_size = FRAMESIZE_VGA;
+  //  config.jpeg_quality = 12;
+  //  config.fb_count = 2;
 
   static camera_config_t camera_config = {
     .pin_pwdn       = PWDN_GPIO_NUM,
@@ -447,12 +447,12 @@ void setup()
     .ledc_timer     = LEDC_TIMER_0,
     .ledc_channel   = LEDC_CHANNEL_0,
     .pixel_format   = PIXFORMAT_JPEG,
-    
-//    .frame_size     = FRAMESIZE_QVGA,
-    .frame_size     = FRAMESIZE_UXGA,
-//    .frame_size     = FRAMESIZE_SVGA,
-//    .frame_size     = FRAMESIZE_QVGA,
-//    .frame_size     = FRAMESIZE_VGA,
+
+    //    .frame_size     = FRAMESIZE_QVGA,
+    //    .frame_size     = FRAMESIZE_UXGA,
+    //    .frame_size     = FRAMESIZE_SVGA,
+    //    .frame_size     = FRAMESIZE_QVGA,
+    .frame_size     = FRAMESIZE_VGA,
     .jpeg_quality   = 12,
     .fb_count       = 2
   };
@@ -498,7 +498,6 @@ void setup()
     &tMjpeg,
     APP_CPU);
 }
-
 
 void loop() {
   // loop() runs in the RTOS Idle Task.
