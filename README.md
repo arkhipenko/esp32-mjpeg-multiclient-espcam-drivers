@@ -7,7 +7,7 @@
 1. Download latest ZIP file from https://github.com/espressif/esp32-camera.git into the esp32-cam subfolder
 
 2. unzip using `unzip -j esp32-cam-master.zip` command. This will place all files in the same folder
-      **NOTE:** please observe the `-j` flag: the sketch assumes all files are in the same folder. 
+**NOTE:** please observe the `-j` flag: the sketch assumes all files are in the same folder. 
 
 3. In **esp32-cam.ino** sketch select your camera pin assignment. The choices are:
 
@@ -19,13 +19,13 @@
 
 4. Compile the **esp32-cam.ino** sketch using the following settings:
 
-      ESP32 Dev Module
-      CPU Freq: 240
-      Flash Freq: 80
-      Flash mode: QIO
-      Flash Size: 4Mb
-      Partition: Minimal SPIFFS (or any other that would fit the sketch)
-      PSRAM: Enabled
+ESP32 Dev Module
+CPU Freq: 240
+Flash Freq: 80
+Flash mode: QIO
+Flash Size: 4Mb
+Partition: Minimal SPIFFS (or any other that would fit the sketch)
+PSRAM: Enabled
 
 ### Results:
 
