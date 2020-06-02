@@ -49,3 +49,32 @@ I was able to run multiple browser windows, multiple VLC windows and connect mul
 This is incredible considering the size of this thing! The camera on ESP-EYE is actually quite good. 
 
 ### Enjoy!
+
+
+
+------
+
+##### Other repositories that may be of interest
+
+###### ESP32 MJPEG streaming server servicing a single client:
+
+https://github.com/arkhipenko/esp32-cam-mjpeg
+
+
+
+###### ESP32 MJPEG streaming server servicing multiple clients (FreeRTOS based):
+
+https://github.com/arkhipenko/esp32-cam-mjpeg-multiclient
+
+
+
+###### ESP32 MJPEG streaming server servicing multiple clients (FreeRTOS based) with the latest camera drivers from espressif.
+
+https://github.com/arkhipenko/esp32-mjpeg-multiclient-espcam-drivers
+
+
+
+###### Cooperative multitasking library:
+
+https://github.com/arkhipenko/TaskScheduler
+
