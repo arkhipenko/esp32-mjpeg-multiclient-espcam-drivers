@@ -4,7 +4,7 @@
   and ESP-EYE modules.
   This is tested to work with VLC and Blynk video widget and can support up to 10
   simultaneously connected streaming clients.
-  Simultaneous streaming is implemented with FreeRTOS tasks.
+  Simultaneous streaming is implemented with dedicated FreeRTOS tasks.
 
   Inspired by and based on this Instructable: $9 RTSP Video Streamer Using the ESP32-CAM Board
   (https://www.instructables.com/id/9-RTSP-Video-Streamer-Using-the-ESP32-CAM-Board/)
@@ -37,10 +37,12 @@
 
 // Select camera model
 //#define CAMERA_MODEL_WROVER_KIT
-//#define CAMERA_MODEL_ESP_EYE
+#define CAMERA_MODEL_ESP_EYE
 //#define CAMERA_MODEL_M5STACK_PSRAM
 //#define CAMERA_MODEL_M5STACK_WIDE
-#define CAMERA_MODEL_AI_THINKER
+//#define CAMERA_MODEL_AI_THINKER
+
+#define MAX_CLIENTS   10
 
 #include "camera_pins.h"
 
@@ -66,19 +68,17 @@ WebServer server(80);
 // Streaming is implemented with 3 tasks:
 TaskHandle_t tMjpeg;   // handles client connections to the webserver
 TaskHandle_t tCam;     // handles getting picture frames from the camera and storing them locally
-TaskHandle_t tStream;  // actually streaming frames to all connected clients
+
+uint8_t       noActiveClients;       // number of active clients
 
 // frameSync semaphore is used to prevent streaming buffer as it is replaced with the next frame
 SemaphoreHandle_t frameSync = NULL;
 
-// Queue stores currently connected clients to whom we are streaming
-QueueHandle_t streamingClients;
+// We will try to achieve 24 FPS frame rate
+const int FPS = 24;
 
-// We will try to achieve 25 FPS frame rate
-const int FPS = 10;
-
-// We will handle web client requests every 50 ms (20 Hz)
-const int WSINTERVAL = 50;
+// We will handle web client requests every 100 ms (10 Hz)
+const int WSINTERVAL = 100;
 
 
 // ======== Server Connection Handler Task ==========================
@@ -90,31 +90,17 @@ void mjpegCB(void* pvParameters) {
   frameSync = xSemaphoreCreateBinary();
   xSemaphoreGive( frameSync );
 
-  // Creating a queue to track all connected clients
-  streamingClients = xQueueCreate( 10, sizeof(WiFiClient*) );
-
   //=== setup section  ==================
 
   //  Creating RTOS task for grabbing frames from the camera
   xTaskCreatePinnedToCore(
     camCB,        // callback
     "cam",        // name
-    4096,         // stacj size
+    4 * 1024,       // stacj size
     NULL,         // parameters
     2,            // priority
     &tCam,        // RTOS task handle
-    APP_CPU);     // core
-
-  //  Creating task to push the stream to all connected clients
-  xTaskCreatePinnedToCore(
-    streamCB,
-    "strmCB",
-    4096,
-    NULL, //(void*) handler,
-    2,
-    &tStream,
-//    APP_CPU);
-    PRO_CPU);
+    PRO_CPU);     // core
 
   //  Registering webserver handling routines
   server.on("/mjpeg/1", HTTP_GET, handleJPGSstream);
@@ -124,6 +110,9 @@ void mjpegCB(void* pvParameters) {
   //  Starting webserver
   server.begin();
 
+  noActiveClients = 0;
+
+  Serial.printf("\nmjpegCB: free heap (start)  : %d\n", ESP.getFreeHeap());
   //=== loop() section  ===================
   xLastWakeTime = xTaskGetTickCount();
   for (;;) {
@@ -136,9 +125,10 @@ void mjpegCB(void* pvParameters) {
 }
 
 
-// Commonly used variables:
-volatile size_t camSize;    // size of the current frame, byte
-volatile char* camBuf;      // pointer to the current frame
+// Current frame information
+volatile uint32_t frameNumber;
+volatile size_t   camSize;    // size of the current frame, byte
+volatile char*    camBuf;      // pointer to the current frame
 
 
 // ==== RTOS task to grab frames from the camera =========================
@@ -149,13 +139,11 @@ void camCB(void* pvParameters) {
   //  A running interval associated with currently desired frame rate
   const TickType_t xFrequency = pdMS_TO_TICKS(1000 / FPS);
 
-  // Mutex for the critical section of swithing the active frames around
-  portMUX_TYPE xSemaphore = portMUX_INITIALIZER_UNLOCKED;
-
   //  Pointers to the 2 frames, their respective sizes and index of the current frame
   char* fbs[2] = { NULL, NULL };
   size_t fSize[2] = { 0, 0 };
   int ifb = 0;
+  frameNumber = 0;
 
   //=== loop() section  ===================
   xLastWakeTime = xTaskGetTickCount();
@@ -170,7 +158,7 @@ void camCB(void* pvParameters) {
 
     //  If frame size is more that we have previously allocated - request  125% of the current frame space
     if (s > fSize[ifb]) {
-      fSize[ifb] = s * 4 / 3;
+      fSize[ifb] = s + s;
       fbs[ifb] = allocateMemory(fbs[ifb], fSize[ifb]);
     }
 
@@ -185,21 +173,17 @@ void camCB(void* pvParameters) {
 
     //  Only switch frames around if no frame is currently being streamed to a client
     //  Wait on a semaphore until client operation completes
-    xSemaphoreTake( frameSync, portMAX_DELAY );
+    //    xSemaphoreTake( frameSync, portMAX_DELAY );
 
-    //  Do not allow interrupts while switching the current frame
-    taskENTER_CRITICAL(&xSemaphore);
+    //  Do not allow frame copying while switching the current frame
+    xSemaphoreTake( frameSync, xFrequency );
     camBuf = fbs[ifb];
     camSize = s;
-    ifb = (++ifb) & 1;  // this should produce 1, 0, 1, 0, 1 ... sequence
-    taskEXIT_CRITICAL(&xSemaphore);
-
+    ifb++;
+    ifb &= 1;  // this should produce 1, 0, 1, 0, 1 ... sequence
+    frameNumber++;
     //  Let anyone waiting for a frame know that the frame is ready
     xSemaphoreGive( frameSync );
-
-    //  Technically only needed once: let the streaming task know that we have at least one frame
-    //  and it could start sending frames to the clients, if any
-    xTaskNotifyGive( tStream );
 
     //  Immediately let other (streaming) tasks run
     taskYIELD();
@@ -207,7 +191,12 @@ void camCB(void* pvParameters) {
     //  If streaming task has suspended itself (no active clients to stream to)
     //  there is no need to grab frames from the camera. We can save some juice
     //  by suspedning the tasks
-    if ( eTaskGetState( tStream ) == eSuspended ) {
+    if ( noActiveClients == 0 ) {
+      Serial.printf("mjpegCB: free heap           : %d\n", ESP.getFreeHeap());
+      Serial.printf("mjpegCB: min free heap)      : %d\n", ESP.getMinFreeHeap());
+      Serial.printf("mjpegCB: max alloc free heap : %d\n", ESP.getMaxAllocHeap());
+      Serial.printf("mjpegCB: tCam stack wtrmark  : %d\n", uxTaskGetStackHighWaterMark(tCam));
+      Serial.flush();
       vTaskSuspend(NULL);  // passing NULL means "suspend yourself"
     }
   }
@@ -220,28 +209,13 @@ char* allocateMemory(char* aPtr, size_t aSize) {
   //  Since current buffer is too smal, free it
   if (aPtr != NULL) free(aPtr);
 
-
-  size_t freeHeap = ESP.getFreeHeap();
   char* ptr = NULL;
+  ptr = (char*) ps_malloc(aSize);
 
-  // If memory requested is more than 2/3 of the currently free heap, try PSRAM immediately
-  if ( aSize > freeHeap * 2 / 3 ) {
-    if ( psramFound() && ESP.getFreePsram() > aSize ) {
-      ptr = (char*) ps_malloc(aSize);
-    }
-  }
-  else {
-    //  Enough free heap - let's try allocating fast RAM as a buffer
-    ptr = (char*) malloc(aSize);
-
-    //  If allocation on the heap failed, let's give PSRAM one more chance:
-    if ( ptr == NULL && psramFound() && ESP.getFreePsram() > aSize) {
-      ptr = (char*) ps_malloc(aSize);
-    }
-  }
-
-  // Finally, if the memory pointer is NULL, we were not able to allocate any memory, and that is a terminal condition.
+  // If the memory pointer is NULL, we were not able to allocate any memory, and that is a terminal condition.
   if (ptr == NULL) {
+    Serial.println("Out of memory!");
+    delay(5000);
     ESP.restart();
   }
   return ptr;
@@ -259,27 +233,47 @@ const int bdrLen = strlen(BOUNDARY);
 const int cntLen = strlen(CTNTTYPE);
 
 
+struct streamInfo {
+  uint32_t        frame;
+  WiFiClient      client;
+  TaskHandle_t    task;
+  char*           buffer;
+  size_t          len;
+};
+
 // ==== Handle connection request from clients ===============================
 void handleJPGSstream(void)
 {
-  //  Can only acommodate 10 clients. The limit is a default for WiFi connections
-  if ( !uxQueueSpacesAvailable(streamingClients) ) return;
+  if ( noActiveClients >= MAX_CLIENTS ) return;
+  Serial.printf("handleJPGSstream start: free heap  : %d\n", ESP.getFreeHeap());
 
+  streamInfo* info = new streamInfo;
 
-  //  Create a new WiFi Client object to keep track of this one
-  WiFiClient* client = new WiFiClient();
-  *client = server.client();
+  info->frame = frameNumber - 1;
+  info->client = server.client();
+  info->buffer = NULL;
+  info->len = 0;
 
-  //  Immediately send this client a header
-  client->write(HEADER, hdrLen);
-  client->write(BOUNDARY, bdrLen);
+  //  Creating task to push the stream to all connected clients
+  int rc = xTaskCreatePinnedToCore(
+             streamCB,
+             "strmCB",
+             3 * 1024,
+             (void*) info,
+             2,
+             &info->task,
+             APP_CPU);
+  if ( rc != pdPASS ) {
+    Serial.printf("handleJPGSstream: error creating RTOS task. rc = %d\n", rc);
+    Serial.printf("handleJPGSstream: free heap  : %d\n", ESP.getFreeHeap());
+    //    Serial.printf("stk high wm: %d\n", uxTaskGetStackHighWaterMark(tSend));
+    delete info;
+  }
 
-  // Push the client to the streaming queue
-  xQueueSend(streamingClients, (void *) &client, 0);
+  noActiveClients++;
 
   // Wake up streaming tasks, if they were previously suspended:
   if ( eTaskGetState( tCam ) == eSuspended ) vTaskResume( tCam );
-  if ( eTaskGetState( tStream ) == eSuspended ) vTaskResume( tStream );
 }
 
 
@@ -289,60 +283,62 @@ void streamCB(void * pvParameters) {
   TickType_t xLastWakeTime;
   TickType_t xFrequency;
 
-  //  Wait until the first frame is captured and there is something to send
-  //  to clients
-  ulTaskNotifyTake( pdTRUE,          /* Clear the notification value before exiting. */
-                    portMAX_DELAY ); /* Block indefinitely. */
+  streamInfo* info = (streamInfo*) pvParameters;
+
+  if ( info == NULL ) {
+    Serial.println("streamCB: a NULL pointer passed");
+  }
+  //  Immediately send this client a header
+  info->client.write(HEADER, hdrLen);
+  info->client.write(BOUNDARY, bdrLen);
+  taskYIELD();
 
   xLastWakeTime = xTaskGetTickCount();
+  xFrequency = pdMS_TO_TICKS(1000 / FPS);
+
   for (;;) {
-    // Default assumption we are running according to the FPS
-    xFrequency = pdMS_TO_TICKS(1000 / FPS);
-
     //  Only bother to send anything if there is someone watching
-    UBaseType_t activeClients = uxQueueMessagesWaiting(streamingClients);
-    if ( activeClients ) {
-      // Adjust the period to the number of connected clients
-      xFrequency /= activeClients;
+    if ( info->client.connected() ) {
 
-      //  Since we are sending the same frame to everyone,
-      //  pop a client from the the front of the queue
-      WiFiClient *client;
-      xQueueReceive (streamingClients, (void*) &client, 0);
-
-      //  Check if this client is still connected.
-
-      if (!client->connected()) {
-        //  delete this client reference if s/he has disconnected
-        //  and don't put it back on the queue anymore. Bye!
-        delete client;
-      }
-      else {
-
-        //  Ok. This is an actively connected client.
-        //  Let's grab a semaphore to prevent frame changes while we
-        //  are serving this frame
+      if ( info->frame != frameNumber) {
         xSemaphoreTake( frameSync, portMAX_DELAY );
-
-        client->write(CTNTTYPE, cntLen);
-        sprintf(buf, "%d\r\n\r\n", camSize);
-        client->write(buf, strlen(buf));
-        client->write((char*) camBuf, (size_t)camSize);
-        client->write(BOUNDARY, bdrLen);
-
-        // Since this client is still connected, push it to the end
-        // of the queue for further processing
-        xQueueSend(streamingClients, (void *) &client, 0);
-
-        //  The frame has been served. Release the semaphore and let other tasks run.
-        //  If there is a frame switch ready, it will happen now in between frames
+        if ( info->buffer == NULL ) {
+          info->buffer = allocateMemory (info->buffer, camSize);
+          info->len = camSize;
+        }
+        else {
+          if ( camSize > info->len ) {
+            info->buffer = allocateMemory (info->buffer, camSize);
+            info->len = camSize;
+          }
+        }
+        memcpy(info->buffer, (const void*) camBuf, info->len);
         xSemaphoreGive( frameSync );
         taskYIELD();
+
+        info->frame = frameNumber;
+        info->client.write(CTNTTYPE, cntLen);
+        sprintf(buf, "%d\r\n\r\n", info->len);
+        info->client.write(buf, strlen(buf));
+        info->client.write((char*) info->buffer, (size_t)info->len);
+        info->client.write(BOUNDARY, bdrLen);
+        info->client.flush();
       }
     }
     else {
-      //  Since there are no connected clients, there is no reason to waste battery running
-      vTaskSuspend(NULL);
+      //  client disconnected - clean up.
+      noActiveClients--;
+      Serial.printf("streamCB: Stream Task stack wtrmark  : %d\n", uxTaskGetStackHighWaterMark(info->task));
+      Serial.flush();
+      info->client.flush();
+      info->client.stop();
+      if ( info->buffer ) {
+        free( info->buffer );
+        info->buffer = NULL;
+      }
+      delete info;
+      info = NULL;
+      vTaskDelete(NULL);
     }
     //  Let other tasks run after serving every client
     taskYIELD();
@@ -361,9 +357,9 @@ const int jhdLen = strlen(JHEADER);
 void handleJPG(void)
 {
   WiFiClient client = server.client();
-  camera_fb_t* fb = esp_camera_fb_get();
 
   if (!client.connected()) return;
+  camera_fb_t* fb = esp_camera_fb_get();
   client.write(JHEADER, jhdLen);
   client.write((char*)fb->buf, fb->len);
   esp_camera_fb_return(fb);
@@ -393,7 +389,7 @@ void setup()
   // Setup Serial connection:
   Serial.begin(115200);
   delay(1000); // wait for a second to let Serial connect
-
+  Serial.printf("setup: free heap  : %d\n", ESP.getFreeHeap());
 
   // Configure the camera
   //  camera_config_t config;
@@ -448,13 +444,28 @@ void setup()
     .ledc_timer     = LEDC_TIMER_0,
     .ledc_channel   = LEDC_CHANNEL_0,
     .pixel_format   = PIXFORMAT_JPEG,
-
+    /*
+        FRAMESIZE_96X96,    // 96x96
+        FRAMESIZE_QQVGA,    // 160x120
+        FRAMESIZE_QCIF,     // 176x144
+        FRAMESIZE_HQVGA,    // 240x176
+        FRAMESIZE_240X240,  // 240x240
+        FRAMESIZE_QVGA,     // 320x240
+        FRAMESIZE_CIF,      // 400x296
+        FRAMESIZE_HVGA,     // 480x320
+        FRAMESIZE_VGA,      // 640x480
+        FRAMESIZE_SVGA,     // 800x600
+        FRAMESIZE_XGA,      // 1024x768
+        FRAMESIZE_HD,       // 1280x720
+        FRAMESIZE_SXGA,     // 1280x1024
+        FRAMESIZE_UXGA,     // 1600x1200
+    */
     //    .frame_size     = FRAMESIZE_QVGA,
     //    .frame_size     = FRAMESIZE_UXGA,
     //    .frame_size     = FRAMESIZE_SVGA,
     //    .frame_size     = FRAMESIZE_VGA,
-    .frame_size     = FRAMESIZE_SVGA,
-    .jpeg_quality   = 12,
+    .frame_size     = FRAMESIZE_UXGA,
+    .jpeg_quality   = 16,
     .fb_count       = 2
   };
 
@@ -493,13 +504,16 @@ void setup()
   xTaskCreatePinnedToCore(
     mjpegCB,
     "mjpeg",
-    4096,
+    2*1024,
     NULL,
     2,
     &tMjpeg,
     APP_CPU);
+
+  Serial.printf("setup complete: free heap  : %d\n", ESP.getFreeHeap());
 }
 
 void loop() {
-  vTaskDelay(100);
+  // this seems to be necessary to let IDLE task run and do GC
+  vTaskDelay(1000);
 }

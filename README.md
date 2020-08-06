@@ -3,11 +3,35 @@
 ## With latest ESP-CAM drivers
 Full story: https://www.hackster.io/anatoli-arkhipenko/multi-client-mjpeg-streaming-from-esp32-47768f
 
+### Contents:
+
+#### esp32-cam folder:
+
+MJPEG Multiclient Streaming Server using RTOS queue to serve video to clients. 
+
+The problem with this approach is that the slowest connected client slows it down for everyone. 
+
+#### esp32-cam-rtos folder:
+
+MJPEG Multiclient Streaming Server using dedicated RTOS tasks to serve video to clients. 
+
+This solves the problem of slowest client as every client is served independently based on their bandwidth. Slow clients  are just not getting all the frames. 
+
+#### esp32-cam-allframes folder:
+
+MJPEG Multiclient Streaming Server using dedicated RTOS tasks to serve video to clients. 
+
+All captured frames are stored in PSRAM (until you run out of memory) and served to individual clients one after another, so every client is guaranteed to get all frames in order, at their own pace (good for recording without frame drops)
+
+
+
 ### Procedure:
 
 1. Download latest ZIP file from https://github.com/espressif/esp32-camera.git into the esp32-cam subfolder
 
-2. unzip using `unzip -j esp32-cam-master.zip` command. This will place all files in the same folder
+2. Delete `examples` folder from the archive
+
+3. unzip using `unzip -j esp32-cam-master.zip` command. This will place all files in the same folder
 
    
 
@@ -38,14 +62,14 @@ Compile the **esp32-cam.ino** sketch using the following settings:
 - Flash Freq: 80
 - Flash mode: QIO
 - Flash Size: 4Mb
-- Partition: Minimal SPIFFS (or any other that would fit the sketch)
-- PSRAM: Enabled
+- Partition: Default, Minimal SPIFFS (or any other that would fit the sketch)
+- PSRAM: **Enabled**
 
 
 
 ### Results:
 
-I was able to run multiple browser windows, multiple VLC windows and connect multiple Blynk video widgets (max: 10) to ESP-EYE chip. The delay on the browser window was almost unnoticeable. In VLC you notice a 1 second delay probably due to buffering. Blynk performance all depends on the phone, so no comments there. 
+I was able to run multiple browser windows, multiple VLC windows and connect multiple Blynk video widgets (max: 10) to ESP-EYE chip. The delay on the browser window was almost unnoticeable. In VLC you notice a 1 second delay due to buffering. Blynk performance all depends on the phone, so no comments there. 
 
 This is incredible considering the size of this thing! The camera on ESP-EYE is actually quite good. 
 

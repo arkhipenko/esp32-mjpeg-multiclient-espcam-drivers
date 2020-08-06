@@ -1256,8 +1256,13 @@ esp_err_t camera_init(const camera_config_t* config)
     vsync_intr_disable();
     err = gpio_install_isr_service(ESP_INTR_FLAG_LEVEL1 | ESP_INTR_FLAG_IRAM);
     if (err != ESP_OK) {
-        ESP_LOGE(TAG, "gpio_install_isr_service failed (%x)", err);
-        goto fail;
+    	if (err != ESP_ERR_INVALID_STATE) {
+    		ESP_LOGE(TAG, "gpio_install_isr_service failed (%x)", err);
+        	goto fail;
+    	}
+    	else {
+    		ESP_LOGW(TAG, "gpio_install_isr_service already installed");
+    	}
     }
     err = gpio_isr_handler_add(s_state->config.pin_vsync, &vsync_isr, NULL);
     if (err != ESP_OK) {
@@ -1307,20 +1312,20 @@ esp_err_t esp_camera_init(const camera_config_t* config)
         goto fail;
     }
     if (camera_model == CAMERA_OV7725) {
-        ESP_LOGD(TAG, "Detected OV7725 camera");
+        ESP_LOGI(TAG, "Detected OV7725 camera");
         if(config->pixel_format == PIXFORMAT_JPEG) {
             ESP_LOGE(TAG, "Camera does not support JPEG");
             err = ESP_ERR_CAMERA_NOT_SUPPORTED;
             goto fail;
         }
     } else if (camera_model == CAMERA_OV2640) {
-        ESP_LOGD(TAG, "Detected OV2640 camera");
+        ESP_LOGI(TAG, "Detected OV2640 camera");
     } else if (camera_model == CAMERA_OV3660) {
-        ESP_LOGD(TAG, "Detected OV3660 camera");
+        ESP_LOGI(TAG, "Detected OV3660 camera");
     } else if (camera_model == CAMERA_OV5640) {
-        ESP_LOGD(TAG, "Detected OV5640 camera");
+        ESP_LOGI(TAG, "Detected OV5640 camera");
     } else {
-        ESP_LOGE(TAG, "Camera not supported");
+        ESP_LOGI(TAG, "Camera not supported");
         err = ESP_ERR_CAMERA_NOT_SUPPORTED;
         goto fail;
     }
@@ -1425,7 +1430,7 @@ sensor_t * esp_camera_sensor_get()
 
 esp_err_t esp_camera_save_to_nvs(const char *key) 
 {
-#ifdef ESP_IDF_VERSION_MAJOR
+#if ESP_IDF_VERSION_MAJOR > 3
     nvs_handle_t handle;
 #else
     nvs_handle handle;
@@ -1453,7 +1458,7 @@ esp_err_t esp_camera_save_to_nvs(const char *key)
 
 esp_err_t esp_camera_load_from_nvs(const char *key) 
 {
-#ifdef ESP_IDF_VERSION_MAJOR
+#if ESP_IDF_VERSION_MAJOR > 3
     nvs_handle_t handle;
 #else
     nvs_handle handle;
