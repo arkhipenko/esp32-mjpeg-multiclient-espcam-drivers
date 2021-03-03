@@ -37,10 +37,10 @@
 
 // Select camera model
 //#define CAMERA_MODEL_WROVER_KIT
-//#define CAMERA_MODEL_ESP_EYE
+#define CAMERA_MODEL_ESP_EYE
 //#define CAMERA_MODEL_M5STACK_PSRAM
 //#define CAMERA_MODEL_M5STACK_WIDE
-#define CAMERA_MODEL_AI_THINKER
+//#define CAMERA_MODEL_AI_THINKER
 
 #include "camera_pins.h"
 
@@ -113,7 +113,7 @@ void mjpegCB(void* pvParameters) {
     NULL, //(void*) handler,
     2,
     &tStream,
-//    APP_CPU);
+    //    APP_CPU);
     PRO_CPU);
 
   //  Registering webserver handling routines
@@ -469,6 +469,8 @@ void setup()
     ESP.restart();
   }
 
+  sensor_t* s = esp_camera_sensor_get();
+  s->set_vflip(s, true);
 
   //  Configure and connect to WiFi
   IPAddress ip;

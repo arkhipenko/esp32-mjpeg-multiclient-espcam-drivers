@@ -421,6 +421,8 @@ void setup()
     ESP.restart();
   }
 
+  sensor_t* s = esp_camera_sensor_get();
+  s->set_vflip(s, true);
 
   //  Configure and connect to WiFi
   IPAddress ip;
