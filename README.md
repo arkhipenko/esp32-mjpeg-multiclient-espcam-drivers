@@ -1,7 +1,19 @@
 # MJPEG Multiclient Streaming Server 
 
 ## With latest ESP-CAM drivers
-Full story: https://www.hackster.io/anatoli-arkhipenko/multi-client-mjpeg-streaming-from-esp32-47768f
+**Full story:** https://www.hackster.io/anatoli-arkhipenko/multi-client-mjpeg-streaming-from-esp32-47768f
+
+
+
+**Updated on 2021-03-03:**
+
+- Recompiled with ESP32 Arduino Core 1.0.5
+
+- Updated with latest ESP CAM drivers
+
+- Added vertical flip capability
+
+  
 
 ### Contents:
 
