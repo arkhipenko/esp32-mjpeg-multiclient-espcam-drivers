@@ -463,8 +463,9 @@ void setup()
     //    .frame_size     = FRAMESIZE_QVGA,
     //    .frame_size     = FRAMESIZE_UXGA,
     //    .frame_size     = FRAMESIZE_SVGA,
+    .frame_size     = FRAMESIZE_XGA,
     //    .frame_size     = FRAMESIZE_VGA,
-    .frame_size     = FRAMESIZE_UXGA,
+    //    .frame_size     = FRAMESIZE_UXGA,
     .jpeg_quality   = 16,
     .fb_count       = 2
   };
@@ -482,7 +483,7 @@ void setup()
 
   sensor_t* s = esp_camera_sensor_get();
   s->set_vflip(s, true);
-  
+
   //  Configure and connect to WiFi
   IPAddress ip;
 
@@ -506,7 +507,7 @@ void setup()
   xTaskCreatePinnedToCore(
     mjpegCB,
     "mjpeg",
-    2*1024,
+    2 * 1024,
     NULL,
     2,
     &tMjpeg,

@@ -5,13 +5,13 @@
 
 
 
-**Updated on 2021-03-03:**
+**Updated on 2021-07-01:**
 
-- Recompiled with ESP32 Arduino Core 1.0.5
+- OP updated to account for recent repo changes by Espressif
+
+- Recompiled with ESP32 Arduino Core 1.0.6
 
 - Updated with latest ESP CAM drivers
-
-- Added vertical flip capability
 
   
 
@@ -41,13 +41,17 @@ All captured frames are stored in PSRAM (until you run out of memory) and served
 
 1. Download latest ZIP file from https://github.com/espressif/esp32-camera.git into the esp32-cam subfolder
 
-2. Delete `examples` folder from the archive
+2. Delete `examples` and `test` folders from the archive
 
-3. unzip using `unzip -j esp32-cam-master.zip` command. This will place all files in the same folder
+3. Delete **ALL FILES** in the sketch folder except `esp32-cam*.ino` and `camera_pins.h`
+
+4. In the archive subfolder `esp32-camera-master/target` delete subfolders for `esp32s2` and `esp32s3` - I have not tested with those ones
+
+5. unzip using `unzip -jo esp32-camera-master.zip` command. This will place all files in the same folder
 
    
 
-   **NOTE:** please observe the `-j` flag: the sketch assumes all files are in the same folder. 
+   **NOTE:** please observe the `-jo` flag: the sketch assumes all files are in the same folder and will overwrite the existing old files without asking for confirmation. 
 
 
 

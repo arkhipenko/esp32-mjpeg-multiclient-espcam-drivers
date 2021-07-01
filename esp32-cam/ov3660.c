@@ -142,7 +142,7 @@ static int calc_sysclk(int xclk, bool pll_bypass, int pll_multiplier, int pll_sy
     int PCLK = PLLCLK / 2 / ((pclk_manual && pclk_div)?pclk_div:1);
     int SYSCLK = PLLCLK / 4;
 
-    ESP_LOGD(TAG, "Calculated VCO: %d Hz, PLLCLK: %d Hz, SYSCLK: %d Hz, PCLK: %d Hz", VCO*1000, PLLCLK, SYSCLK, PCLK);
+    ESP_LOGI(TAG, "Calculated VCO: %d Hz, PLLCLK: %d Hz, SYSCLK: %d Hz, PCLK: %d Hz", VCO*1000, PLLCLK, SYSCLK, PCLK);
     return SYSCLK;
 }
 
@@ -310,13 +310,13 @@ static int set_image_options(sensor_t *sensor)
 static int set_framesize(sensor_t *sensor, framesize_t framesize)
 {
     int ret = 0;
-    framesize_t old_framesize = sensor->status.framesize;
-    sensor->status.framesize = framesize;
 
     if(framesize > FRAMESIZE_QXGA){
-        ESP_LOGE(TAG, "Invalid framesize: %u", framesize);
-        return -1;
+        ESP_LOGW(TAG, "Invalid framesize: %u", framesize);
+        framesize = FRAMESIZE_QXGA;
     }
+    framesize_t old_framesize = sensor->status.framesize;
+    sensor->status.framesize = framesize;
     uint16_t w = resolution[framesize].width;
     uint16_t h = resolution[framesize].height;
     aspect_ratio_t ratio = resolution[sensor->status.framesize].aspect_ratio;
@@ -355,7 +355,7 @@ static int set_framesize(sensor_t *sensor, framesize_t framesize)
     }
 
     if (sensor->pixformat == PIXFORMAT_JPEG) {
-        if (framesize == FRAMESIZE_QXGA) {
+        if (framesize == FRAMESIZE_QXGA || sensor->xclk_freq_hz == 16000000) {
             //40MHz SYSCLK and 10MHz PCLK
             ret = set_pll(sensor, false, 24, 1, 3, false, 0, true, 8);
         } else {
@@ -363,12 +363,16 @@ static int set_framesize(sensor_t *sensor, framesize_t framesize)
             ret = set_pll(sensor, false, 30, 1, 3, false, 0, true, 10);
         }
     } else {
-        if (framesize > FRAMESIZE_CIF) {
-            //10MHz SYSCLK and 10MHz PCLK (6.19 FPS)
-            ret = set_pll(sensor, false, 2, 1, 0, false, 0, true, 2);
+        //tuned for 16MHz XCLK and 8MHz PCLK
+        if (framesize > FRAMESIZE_HVGA) {
+            //8MHz SYSCLK and 8MHz PCLK (4.44 FPS)
+            ret = set_pll(sensor, false, 4, 1, 0, false, 2, true, 2);
+        } else if (framesize >= FRAMESIZE_QVGA) {
+            //16MHz SYSCLK and 8MHz PCLK (10.25 FPS)
+            ret = set_pll(sensor, false, 8, 1, 0, false, 2, true, 4);
         } else {
-            //25MHz SYSCLK and 10MHz PCLK (15.45 FPS)
-            ret = set_pll(sensor, false, 5, 1, 0, false, 0, true, 5);
+            //32MHz SYSCLK and 8MHz PCLK (17.77 FPS)
+            ret = set_pll(sensor, false, 8, 1, 0, false, 0, true, 8);
         }
     }
 
