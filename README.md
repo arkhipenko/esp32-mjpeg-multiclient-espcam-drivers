@@ -39,17 +39,37 @@ All captured frames are stored in PSRAM (until you run out of memory) and served
 
 
 
+### DISCLAIMER:
+
+The repository should compile and work **AS-IS** as of the date stated above.  Espressif is actively working on the camera drivers, and their **future updates may break the procedure below**. Please report the broken process providing as much information as possible, definitely the make and model of your camera device, version of the Arduino Core and IDE used. 
+
+Remember, this is a hack, a POC and a test. This is **NOT GUARANTEED** to work on all ESP32-based devices. The performance could be different depending on the make, brand and manufacturer of your camera.
+
+Please do not demand fixes and updates - you are welcome to take this repo as a baseline and improve upon it. 
+
+*Have fun!*
+
+
+
 ### Procedure:
 
-1. Download latest ZIP file from https://github.com/espressif/esp32-camera.git into the esp32-cam subfolder
+Use this process **ONLY** if you want to update to the very latest drivers. 
 
-2. Delete `examples` and `test` folders from the archive
+**Remember**: updating to the latest drivers may break the code dependencies and require investigation / code changes. 
 
-3. Delete **ALL FILES** in the sketch folder except `esp32-cam*.ino` and `camera_pins.h`
+1. Clone or pull this repo locally using GIT
 
-4. In the archive subfolder `esp32-camera-master/target` delete subfolders for `esp32s2` and `esp32s3` - I have not tested with those ones
+2. **Use AS-IS (in Arduino IDE) for guaranteed results.** If you feel adventurous and brave - proceed to step 3. 
 
-5. unzip using `unzip -jo esp32-camera-master.zip` command. This will place all files in the same folder
+3. Download latest ZIP file from https://github.com/espressif/esp32-camera.git into the esp32-cam subfolder
+
+4. In the archive: delete `examples` and `test` folders
+
+5. Delete **ALL FILES** in the sketch folder (from step 1) except `esp32-cam*.ino` and `camera_pins.h`
+
+6. In the archive:  switch to subfolder `esp32-camera-master/target` and delete subfolders for `esp32s2` and `esp32s3` - I have not tested with those ones
+
+7. unzip using `unzip -jo esp32-camera-master.zip` command. This will place all files in the same folder in a flat file structure
 
    
 
