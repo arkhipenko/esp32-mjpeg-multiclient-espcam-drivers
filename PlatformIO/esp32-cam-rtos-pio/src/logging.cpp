@@ -14,7 +14,7 @@ void setupLogging() {
 // === millis() - based timestamp ==
 void printTimestamp(Print* logOutput) {
   char c[24];
-  sprintf(c, "%10lu ", (long unsigned int) xTaskGetTickCount()/*millis()*/);
+  sprintf(c, "%10lu ", (long unsigned int) MILLIS_FUNCTION);
   logOutput->print(c);
 }
 
@@ -22,7 +22,7 @@ void printTimestamp(Print* logOutput) {
 // start-time-based timestamp ========
 void printTimestampMillis(Print* logOutput) {
   char c[64];
-  unsigned long mm = xTaskGetTickCount();//millis();
+  unsigned long mm = MILLIS_FUNCTION;
   int ms = mm % 1000;
   int s = mm / 1000;
   int m = s / 60;

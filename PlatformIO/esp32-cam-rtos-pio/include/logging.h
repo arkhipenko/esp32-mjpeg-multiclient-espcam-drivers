@@ -2,6 +2,9 @@
 // ==== includes =================================
 #include "references.h"
 
+#define MILLIS_FUNCTION xTaskGetTickCount()
+// #define MILLIS_FUNCTION millis()
+
 // ==== prototypes ===============================
 void    setupLogging();
 

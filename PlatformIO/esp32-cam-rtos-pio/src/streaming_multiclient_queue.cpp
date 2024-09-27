@@ -2,8 +2,6 @@
 
 #if defined(CAMERA_MULTICLIENT_QUEUE)
 
-// frameChunck_t frameChunck;
-// streamInfo_t streamInfo;
 QueueHandle_t streamingClients;
 
 volatile size_t camSize;    // size of the current frame, byte

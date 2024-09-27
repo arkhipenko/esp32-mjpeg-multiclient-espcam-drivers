@@ -19,7 +19,6 @@ void camCB(void* pvParameters) {
 
     //  Grab a frame from the camera and allocate frame chunk for it
     fb = esp_camera_fb_get();
-//    frameChunck_t* f = (frameChunck_t*) ps_malloc( sizeof(frameChunck_t) );
     frameChunck_t* f = (frameChunck_t*) allocateMemory(NULL, sizeof(frameChunck_t), true);
     if ( f  ) {
       // char* d = (char*) ps_malloc( fb->len );

@@ -1,23 +1,14 @@
 /*
 
-  This is a simple MJPEG streaming webserver implemented for AI-Thinker ESP32-CAM
+  This is a MJPEG streaming webserver implemented for AI-Thinker ESP32-CAM
   and ESP-EYE modules.
   This is tested to work with VLC and Blynk video widget and can support up to 10
   simultaneously connected streaming clients.
-  Simultaneous streaming is implemented with dedicated FreeRTOS tasks.
+  Simultaneous streaming is implemented with FreeRTOS tools: queue and tasks.
 
   Inspired by and based on this Instructable: $9 RTSP Video Streamer Using the ESP32-CAM Board
   (https://www.instructables.com/id/9-RTSP-Video-Streamer-Using-the-ESP32-CAM-Board/)
 
-  Board: AI-Thinker ESP32-CAM or ESP-EYE
-  Compile as:
-   ESP32 Dev Module
-   CPU Freq: 240
-   Flash Freq: 80
-   Flash mode: QIO
-   Flash Size: 4Mb
-   Partrition: Minimal SPIFFS
-   PSRAM: Enabled
 */
 
 #include "definitions.h"
@@ -44,11 +35,6 @@ const char *c_pwd = AP_PWD;
 // Camera models overview:
 // https://randomnerdtutorials.com/esp32-cam-camera-pin-gpios/
 
-// #define CAMERA_MODEL_WROVER_KIT
-// #define CAMERA_MODEL_ESP_EYE
-// #define CAMERA_MODEL_M5STACK_PSRAM
-// #define CAMERA_MODEL_M5STACK_WIDE
-// #define CAMERA_MODEL_AI_THINKER
 
 #include "camera_pins.h"
 
@@ -56,11 +42,11 @@ WebServer server(80);
 
 // ===== rtos task handles =========================
 // Streaming is implemented with tasks:
-TaskHandle_t tMjpeg;   // handles client connections to the webserver
-TaskHandle_t tCam;     // handles getting picture frames from the camera and storing them locally
+TaskHandle_t tMjpeg;            // handles client connections to the webserver
+TaskHandle_t tCam;              // handles getting picture frames from the camera and storing them locally
 TaskHandle_t tStream;
 
-uint8_t      noActiveClients;       // number of active clients
+uint8_t      noActiveClients;   // number of active clients
 
 // frameSync semaphore is used to prevent streaming buffer as it is replaced with the next frame
 SemaphoreHandle_t frameSync = NULL;
@@ -119,22 +105,6 @@ void setup()
     .ledc_timer     = LEDC_TIMER_0,
     .ledc_channel   = LEDC_CHANNEL_0,
     .pixel_format   = PIXFORMAT_JPEG,
-    /*
-        FRAMESIZE_96X96,    // 96x96
-        FRAMESIZE_QQVGA,    // 160x120
-        FRAMESIZE_QCIF,     // 176x144
-        FRAMESIZE_HQVGA,    // 240x176
-        FRAMESIZE_240X240,  // 240x240
-        FRAMESIZE_QVGA,     // 320x240
-        FRAMESIZE_CIF,      // 400x296
-        FRAMESIZE_HVGA,     // 480x320
-        FRAMESIZE_VGA,      // 640x480
-        FRAMESIZE_SVGA,     // 800x600
-        FRAMESIZE_XGA,      // 1024x768
-        FRAMESIZE_HD,       // 1280x720
-        FRAMESIZE_SXGA,     // 1280x1024
-        FRAMESIZE_UXGA,     // 1600x1200
-    */
     .frame_size = FRAME_SIZE,
     .jpeg_quality   = JPEG_QUALITY,
     .fb_count       = 2,
@@ -202,6 +172,5 @@ void setup()
 }
 
 void loop() {
-  // vTaskDelay(1000);
   vTaskDelete(NULL);
 }
