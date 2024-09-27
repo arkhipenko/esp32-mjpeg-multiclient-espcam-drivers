@@ -138,57 +138,7 @@ Please do not demand fixes and updates - you are welcome to take this repo as a 
 
 ### Procedure:
 
-Use this process **ONLY** if you want to update to the very latest drivers. 
-
-**Remember**: updating to the latest drivers may break the code dependencies and require investigation / code changes. 
-
-1. Clone or pull this repo locally using GIT
-
-2. **Use AS-IS (in Arduino IDE) for guaranteed results.** If you feel adventurous and brave - proceed to step 3. 
-
-3. Download latest ZIP file from https://github.com/espressif/esp32-camera.git into the esp32-cam subfolder
-
-4. In the archive: delete `examples` and `test` folders
-
-5. Delete **ALL FILES** in the sketch folder (from step 1) except `esp32-cam*.ino` and `camera_pins.h`
-
-6. In the archive:  switch to subfolder `esp32-camera-master/target` and delete subfolders for `esp32s2` and `esp32s3` - I have not tested with those ones
-
-7. unzip using `unzip -jo esp32-camera-master.zip` command. This will place all files in the same folder in a flat file structure
-
-   
-
-   **NOTE:** please observe the `-jo` flag: the sketch assumes all files are in the same folder and will overwrite the existing old files without asking for confirmation. 
-
-
-
-In **esp32-cam.ino** sketch select your camera pin assignment. 
-
-The choices are:
-
-- CAMERA_MODEL_WROVER_KIT
-
-- CAMERA_MODEL_ESP_EYE
-
-- CAMERA_MODEL_M5STACK_PSRAM
-
-- CAMERA_MODEL_M5STACK_WIDE
-
-- CAMERA_MODEL_AI_THINKER
-
-  
-
-Compile the **esp32-cam.ino** sketch using the following settings:
-
-- ESP32 Dev Module
-- CPU Freq: 240
-- Flash Freq: 80
-- Flash mode: QIO
-- Flash Size: 4Mb
-- Partition: Default, Minimal SPIFFS (or any other that would fit the sketch)
-- PSRAM: **Enabled**
-
-
+#### WORK IN PROGRESS
 
 ### Results:
 
