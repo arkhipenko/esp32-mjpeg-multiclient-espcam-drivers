@@ -17,17 +17,24 @@
 
 - code includes all three RTOS frame delivery options:
 
--- Single RTOS task serving the same frame to all  clients (compile CAMERA_MULTICLIENT_QUEUE)
+     - Single RTOS task serving the same frame to all  clients (compile CAMERA_MULTICLIENT_QUEUE)
 
--- Separate dedicated RTOS tasks serving the same frame to clients independently (compile CAMERA_MULTICLIENT_TASK)
+     - Separate dedicated RTOS tasks serving the same frame to clients independently (compile CAMERA_MULTICLIENT_TASK)
 
--- Serarate dedicated RTOS tasks serving individual frames to clients - no frames are "dropped" (compile CAMERA_ALL_FRAMES)
+     - Serarate dedicated RTOS tasks serving individual frames to clients - no frames are "dropped" (compile CAMERA_ALL_FRAMES)
 
 
 ### Quick start
 
 Pull the repo recursively in order to include the latest esp32-camera drivers. 
 
+`git clone --recurse-submodules https://github.com/arkhipenko/esp32-mjpeg-multiclient-espcam-drivers.git`
+
+Open workspace file `esp32-cam-rtos-pio\esp32-cam-rtos-pio.code-workspace` with MS VSCode 
+
+Switch to Platform IO menu then build and upload appropriate camera options
+
+If your cemera model is not listed - read on or try contracting me. 
 
 
 
