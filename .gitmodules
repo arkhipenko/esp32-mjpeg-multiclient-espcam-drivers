@@ -1,0 +1,3 @@
+[submodule "PlatformIO/esp32-cam-rtos-pio/components/esp32-camera"]
+	path = PlatformIO/esp32-cam-rtos-pio/components/esp32-camera
+	url = https://github.com/espressif/esp32-camera.git
