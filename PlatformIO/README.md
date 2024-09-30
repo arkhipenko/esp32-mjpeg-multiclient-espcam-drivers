@@ -30,7 +30,17 @@ Pull the repo recursively in order to include the latest esp32-camera drivers.
 
 `git clone --recurse-submodules https://github.com/arkhipenko/esp32-mjpeg-multiclient-espcam-drivers.git`
 
-Open workspace file `esp32-cam-rtos-pio\esp32-cam-rtos-pio.code-workspace` with MS VSCode 
+Open workspace file `esp32-cam-rtos-pio\esp32-cam-rtos-pio.code-workspace` with MS VSCode
+
+Inspect the platformio.ini file:
+
+- Select frame service:
+     - -D CAMERA_MULTICLIENT_QUEUE
+     - -D CAMERA_MULTICLIENT_TASK
+     - -D CAMERA_ALL_FRAMES
+- Select appropriate frame size: -D FRAME_SIZE=FRAMESIZE_HVGA <== example
+- Choose FPS (10 recommended)
+- Choose JPEG quality: JPEG_QUALITY  ==> 0-63 lower means higher quality (0, 1, and 2 did not work for me)
 
 Switch to Platform IO menu then build and upload appropriate camera options
 
