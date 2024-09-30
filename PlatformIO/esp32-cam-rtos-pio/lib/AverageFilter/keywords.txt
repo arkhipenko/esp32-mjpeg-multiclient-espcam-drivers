@@ -1,0 +1,23 @@
+#######################################
+# Syntax Coloring Map For TaskManager
+#######################################
+
+#######################################
+# Datatypes (KEYWORD1)
+#######################################
+
+averageFilter	KEYWORD1
+
+#######################################
+# Methods and Functions (KEYWORD2)
+#######################################
+
+initialize	KEYWORD2
+value	KEYWORD2
+currentValue	KEYWORD2
+samples	KEYWORD2
+
+#######################################
+# Constants (LITERAL1)
+#######################################
+

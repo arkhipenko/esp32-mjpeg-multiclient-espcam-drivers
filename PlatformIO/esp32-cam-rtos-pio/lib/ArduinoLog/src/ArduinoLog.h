@@ -56,6 +56,8 @@ typedef void (*printfunction)(Print*);
    ---- Wildcards
 
    %s   replace with an string (char*)
+   %S   replace with a String (String)
+   %I   replace with an IP address
    %c   replace with an character
    %d   replace with an integer value
    %l   replace with an long value

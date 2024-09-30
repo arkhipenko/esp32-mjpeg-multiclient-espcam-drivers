@@ -1,0 +1,22 @@
+{
+  "name": "AverageFilter",
+  "keywords": "integer, filter, average, signal, processing",
+  "description": "Integer implementation of the Average Filter",
+  "repository":
+  {
+    "type": "git",
+    "url": "https://github.com/arkhipenko/AverageFilter"
+  },
+  "authors":
+  [
+    {
+      "name": "Anatoli Arkhipenko",
+      "email": "arkhipenko@hotmail.com",
+      "url": "https://github.com/arkhipenko",
+      "maintainer": true
+    }
+  ],
+  "version": "1.0.1",
+  "frameworks": "arduino",
+  "platforms": "*"
+}

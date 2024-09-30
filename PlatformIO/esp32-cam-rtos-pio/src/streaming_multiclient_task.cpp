@@ -5,6 +5,12 @@
 volatile size_t   camSize;    // size of the current frame, byte
 volatile char*    camBuf;      // pointer to the current frame
 
+#if defined(BENCHMARK)
+#include <AverageFilter.h>
+#define BENCHMARK_PRINT_INT 1000
+averageFilter<uint32_t> captureAvg(10);
+uint32_t lastPrintCam = millis();
+#endif
 
 void camCB(void* pvParameters) {
 
@@ -23,44 +29,57 @@ void camCB(void* pvParameters) {
   xLastWakeTime = xTaskGetTickCount();
 
   for (;;) {
-
+    size_t s = 0;
     //  Grab a frame from the camera and query its size
     camera_fb_t* fb = NULL;
 
-    fb = esp_camera_fb_get();
-    size_t s = fb->len;
+#if defined(BENCHMARK)
+    uint32_t benchmarkStart = micros();
+#endif
 
-    //  If frame size is more that we have previously allocated - request  125% of the current frame space
-    if (s > fSize[ifb]) {
-      fSize[ifb] = s + s/4;
-      fbs[ifb] = allocateMemory(fbs[ifb], fSize[ifb]);
+    s = 0;
+    fb = esp_camera_fb_get();
+    if ( fb ) {
+      s = fb->len;
+
+      //  If frame size is more that we have previously allocated - request  125% of the current frame space
+      if (s > fSize[ifb]) {
+        fSize[ifb] = s + s/4;
+        fbs[ifb] = allocateMemory(fbs[ifb], fSize[ifb], FAIL_IF_OOM, ANY_MEMORY);
+      }
+
+      //  Copy current frame into local buffer
+      char* b = (char *)fb->buf;
+      memcpy(fbs[ifb], b, s);
+      esp_camera_fb_return(fb);
+    }
+    else {
+      Log.error("camCB: error capturing image for frame %d\n", frameNumber);
+      vTaskDelay(1000);
     }
 
-    //  Copy current frame into local buffer
-    char* b = (char *)fb->buf;
-    memcpy(fbs[ifb], b, s);
-    esp_camera_fb_return(fb);
-
-    //  Let other tasks run and wait until the end of the current frame rate interval (if any time left)
-    // taskYIELD();
-    vTaskDelayUntil(&xLastWakeTime, xFrequency);
+#if defined(BENCHMARK)
+    captureAvg.value(micros()-benchmarkStart);
+#endif
 
     //  Only switch frames around if no frame is currently being streamed to a client
     //  Wait on a semaphore until client operation completes
     //    xSemaphoreTake( frameSync, portMAX_DELAY );
 
     //  Do not allow frame copying while switching the current frame
-    xSemaphoreTake( frameSync, xFrequency );
-    camBuf = fbs[ifb];
-    camSize = s;
-    ifb++;
-    ifb &= 1;  // this should produce 1, 0, 1, 0, 1 ... sequence
-    frameNumber++;
-    //  Let anyone waiting for a frame know that the frame is ready
-    xSemaphoreGive( frameSync );
+    // if ( xSemaphoreTake( frameSync, xFrequency ) ) {
+    if ( xSemaphoreTake( frameSync, portMAX_DELAY ) ) {
+      camBuf = fbs[ifb];
+      camSize = s;
+      ifb++;
+      ifb &= 1;  // this should produce 1, 0, 1, 0, 1 ... sequence
+      frameNumber++;
+      //  Let anyone waiting for a frame know that the frame is ready
+      xSemaphoreGive( frameSync );
+    }
 
-    //  Immediately let other (streaming) tasks run
-    taskYIELD();
+    //  Let other (streaming) tasks run
+    if ( xTaskDelayUntil(&xLastWakeTime, xFrequency) != pdTRUE ) taskYIELD();
 
     //  If streaming task has suspended itself (no active clients to stream to)
     //  there is no need to grab frames from the camera. We can save some juice
@@ -72,6 +91,15 @@ void camCB(void* pvParameters) {
       Log.verbose("mjpegCB: tCam stack wtrmark  : %d\n", uxTaskGetStackHighWaterMark(tCam));
       vTaskSuspend(NULL);  // passing NULL means "suspend yourself"
     }
+
+#if defined(BENCHMARK)
+    if ( millis() - lastPrintCam > BENCHMARK_PRINT_INT ) {
+      lastPrintCam = millis();
+      Log.verbose("mjpegCB: average frame capture time: %d microseconds\n", captureAvg.currentValue() );
+    }
+#endif
+
+
   }
 }
 
@@ -83,8 +111,18 @@ void handleJPGSstream(void)
   Log.verbose("handleJPGSstream start: free heap  : %d\n", ESP.getFreeHeap());
 
   streamInfo_t* info = new streamInfo_t;
+  if ( info == NULL ) {
+    Log.error("handleJPGSstream: cannot allocate stream info - OOM\n");
+    return;
+  }
 
   WiFiClient* client = new WiFiClient();
+  if ( client == NULL ) {
+    Log.error("handleJPGSstream: cannot allocate WiFi client for streaming - OOM\n");
+    free(info);
+    return;
+  }
+
   *client = server.client();
 
   info->frame = frameNumber - 1;
@@ -138,37 +176,91 @@ void streamCB(void * pvParameters) {
   info->client->write(HEADER, hdrLen);
   info->client->write(BOUNDARY, bdrLen);
 
+#if defined(BENCHMARK)
+  averageFilter<int32_t> streamAvg(10);
+  averageFilter<int32_t> waitAvg(10);
+  averageFilter<uint32_t> frameAvg(10);
+  averageFilter<float> fpsAvg(10);
+  uint32_t streamStart = 0;
+  streamAvg.initialize();
+  waitAvg.initialize();
+  frameAvg.initialize();
+  fpsAvg.initialize();
+  uint32_t lastPrint = millis();
+  uint32_t lastFrame = millis();
+#endif
+
   for (;;) {
-    //  Only bother to send anything if there is someone watching
+    //  Only send anything if there is someone watching
     if ( info->client->connected() ) {
 
-      if ( info->frame != frameNumber) {
+      if ( info->frame != frameNumber) { // do not send same frame twice
+
+#if defined (BENCHMARK)
+        streamStart = micros();
+#endif        
+
         xSemaphoreTake( frameSync, portMAX_DELAY );
+        size_t currentSize = camSize;
+
+#if defined (BENCHMARK)
+        waitAvg.value(micros()-streamStart);
+        frameAvg.value(currentSize);
+        streamStart = micros();
+#endif
+
+
+//  ======================== OPTION1 ==================================
+//  server a copy of the buffer - overhead: have to allocate and copy a buffer for all frames
+
+// /*
         if ( info->buffer == NULL ) {
-          info->buffer = allocateMemory (info->buffer, camSize);
+          info->buffer = allocateMemory (info->buffer, camSize, FAIL_IF_OOM, ANY_MEMORY);
           info->len = camSize;
         }
         else {
           if ( camSize > info->len ) {
-            info->buffer = allocateMemory (info->buffer, camSize);
+            info->buffer = allocateMemory (info->buffer, camSize, FAIL_IF_OOM, ANY_MEMORY);
             info->len = camSize;
           }
         }
-        memcpy(info->buffer, (const void*) camBuf, info->len);
+        memcpy(info->buffer, (const void*) camBuf, camSize);
+        
         xSemaphoreGive( frameSync );
 
-        info->frame = frameNumber;
+        sprintf(buf, "%d\r\n\r\n", currentSize);
+        info->client->flush();
         info->client->write(CTNTTYPE, cntLen);
-        sprintf(buf, "%d\r\n\r\n", info->len);
         info->client->write(buf, strlen(buf));
-        info->client->write((char*) info->buffer, (size_t)info->len);
+        info->client->write((char*) info->buffer, currentSize);
         info->client->write(BOUNDARY, bdrLen);
+// */
+
+//  ======================== OPTION2 ==================================
+//  just server the comman buffer protected by mutex
+/*
+        sprintf(buf, "%d\r\n\r\n", camSize);
+        info->client->write(CTNTTYPE, cntLen);
+        info->client->write(buf, strlen(buf));
+        info->client->write((char*) camBuf, (size_t)camSize);
+
+        xSemaphoreGive( frameSync );
+
+        info->client->write(BOUNDARY, bdrLen);
+*/
+
+//  ====================================================================
+        info->frame = frameNumber;
+#if defined (BENCHMARK)
+          streamAvg.value(micros()-streamStart);
+          fpsAvg.value(1000.0 / (float) (millis()-lastFrame) );
+          lastFrame = millis();
+#endif        
       }
     }
     else {
       //  client disconnected - clean up.
       noActiveClients--;
-      Log.trace("streamCB: Client disconnected\n");
       Log.verbose("streamCB: Stream Task stack wtrmark  : %d\n", uxTaskGetStackHighWaterMark(info->task));
       info->client->stop();
       if ( info->buffer ) {
@@ -178,10 +270,19 @@ void streamCB(void * pvParameters) {
       delete info->client;
       delete info;
       info = NULL;
+      Log.trace("streamCB: Client disconnected\n");
+      vTaskDelay(100);
       vTaskDelete(NULL);
     }
     //  Let other tasks run after serving every client
-    if ( !xTaskDelayUntil(&xLastWakeTime, xFrequency) ) taskYIELD();
+    if ( xTaskDelayUntil(&xLastWakeTime, xFrequency) != pdTRUE ) taskYIELD();
+
+#if defined (BENCHMARK)
+    if ( millis() - lastPrint > BENCHMARK_PRINT_INT ) {
+      lastPrint = millis();
+      Log.verbose("streamCB: wait avg=%d, stream avg=%d us, frame avg size=%d bytes, fps=%S\n", waitAvg.currentValue(), streamAvg.currentValue(), frameAvg.currentValue(), String(fpsAvg.currentValue()));
+    }
+#endif
   }
 }
 

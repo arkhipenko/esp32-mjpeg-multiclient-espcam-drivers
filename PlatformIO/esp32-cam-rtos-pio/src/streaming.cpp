@@ -10,9 +10,8 @@ const int bdrLen = strlen(BOUNDARY);
 const int cntLen = strlen(CTNTTYPE);
 volatile uint32_t frameNumber;
 
-
-frameChunck_t* fstFrame;  // first frame
-frameChunck_t* curFrame;  // current frame being captured by the camera
+frameChunck_t* fstFrame = NULL;  // first frame
+frameChunck_t* curFrame = NULL;  // current frame being captured by the camera
 
 void mjpegCB(void* pvParameters) {
   TickType_t xLastWakeTime;
@@ -49,16 +48,19 @@ void mjpegCB(void* pvParameters) {
     server.handleClient();
 
     //  After every server client handling request, we let other tasks run and then pause
-    if ( !xTaskDelayUntil(&xLastWakeTime, xFrequency) ) taskYIELD();
+    if ( xTaskDelayUntil(&xLastWakeTime, xFrequency) != pdTRUE ) taskYIELD();
   }
 }
 
 
 // ==== Memory allocator that takes advantage of PSRAM if present =======================
-char* allocateMemory(char* aPtr, size_t aSize, bool psramOnly) {
+char* allocateMemory(char* aPtr, size_t aSize, bool fail, bool psramOnly) {
 
   //  Since current buffer is too smal, free it
-  if (aPtr != NULL) free(aPtr);
+  if (aPtr != NULL) {
+    free(aPtr);
+    aPtr = NULL;
+  }
 
   char* ptr = NULL;
 
@@ -85,7 +87,7 @@ char* allocateMemory(char* aPtr, size_t aSize, bool psramOnly) {
     }
   }
   // Finally, if the memory pointer is NULL, we were not able to allocate any memory, and that is a terminal condition.
-  if (ptr == NULL) {
+  if (fail && ptr == NULL) {
     Log.fatal("allocateMemory: Out of memory!");
     delay(5000);
     ESP.restart();

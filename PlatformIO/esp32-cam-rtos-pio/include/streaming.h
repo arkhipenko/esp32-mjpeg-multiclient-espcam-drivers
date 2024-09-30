@@ -14,10 +14,10 @@ typedef struct {
 
 typedef struct {
   uint8_t   cnt;  // served to clients counter. when equal to number of active clients, could be deleted
-  uint32_t* nxt;  // next chunck
+  void*     nxt;  // next chunck
   uint32_t  fnm;  // frame number
   uint32_t  siz;  // frame size
- uint8_t*  dat;  // frame pointer
+  uint8_t*  dat;  // frame pointer
 } frameChunck_t;
 
 
@@ -25,7 +25,12 @@ void camCB(void* pvParameters);
 void handleJPGSstream(void);
 void streamCB(void * pvParameters);
 void mjpegCB(void * pvParameters);
-char* allocateMemory(char* aPtr, size_t aSize, bool psramOnly = false);
+
+#define FAIL_IF_OOM true
+#define OK_IF_OOM   false
+#define PSRAM_ONLY  true
+#define ANY_MEMORY  false
+char* allocateMemory(char* aPtr, size_t aSize, bool fail = FAIL_IF_OOM, bool psramOnly = ANY_MEMORY);
 
 extern const char* HEADER;
 extern const char* BOUNDARY;

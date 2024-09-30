@@ -81,7 +81,10 @@ void setup()
   setupLogging();
 
   Log.trace("\n\nMulti-client MJPEG Server\n");
+  Log.trace("setup: total heap : %d\n", ESP.getHeapSize());
   Log.trace("setup: free heap  : %d\n", ESP.getFreeHeap());
+  Log.trace("setup: free psram : %d\n", ESP.getPsramSize());
+  Log.trace("setup: free psram : %d\n", ESP.getFreePsram());
 
   static camera_config_t camera_config = {
     .pin_pwdn       = PWDN_GPIO_NUM,
@@ -101,13 +104,14 @@ void setup()
     .pin_href       = HREF_GPIO_NUM,
     .pin_pclk       = PCLK_GPIO_NUM,
 
+    // .xclk_freq_hz   = 16000000,
     .xclk_freq_hz   = 20000000,
     .ledc_timer     = LEDC_TIMER_0,
     .ledc_channel   = LEDC_CHANNEL_0,
     .pixel_format   = PIXFORMAT_JPEG,
-    .frame_size = FRAME_SIZE,
+    .frame_size     = FRAME_SIZE,
     .jpeg_quality   = JPEG_QUALITY,
-    .fb_count       = 2,
+    .fb_count       = 1, //2,
     .fb_location = CAMERA_FB_IN_DRAM,
     .grab_mode = CAMERA_GRAB_LATEST,
     // .sccb_i2c_port = -1
@@ -166,7 +170,7 @@ void setup()
     NULL,
     2,
     &tMjpeg,
-    APP_CPU);
+    PRO_CPU);
 
   Log.trace("setup complete: free heap  : %d\n", ESP.getFreeHeap());
 }
