@@ -44,7 +44,7 @@ Inspect the platformio.ini file:
 
 Switch to Platform IO menu then build and upload appropriate camera options
 
-If your cemera model is not listed - read on or try contacting me to create appropriate build option, device file and partition scheme. 
+If your camera model is not listed - read on or try contacting me to create appropriate build option, device file and partition scheme. 
 
 When firmware is running, connect to the WIFI AP it creates:
 
@@ -55,7 +55,7 @@ Navigate to: http://192.168.4.1 to the WiFiManager main page.
 
 Provide WIFI credentials for your network
 
-Once connected, the MJPEG stream is available on: Stream Link: http://<your local network IP address>/mjpeg/1
+Once connected, the MJPEG stream is available on: Stream Link: http://your.local.network.IP.address/mjpeg/1
 
 e.g.: Stream Link: http://192.168.122.132/mjpeg/1
 
