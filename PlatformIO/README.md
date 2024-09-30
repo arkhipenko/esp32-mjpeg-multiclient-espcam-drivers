@@ -41,6 +41,8 @@ When firmware is running, connect to the WIFI AP it creates:
 - SSID: mjpeg-ap
 - Password: MJPEG123
 
+Navigate to: http://192.168.4.1 to the WiFiManager main page.
+
 Provide WIFI credentials for your network
 
 Once connected, the MJPEG stream is available on: Stream Link: http://<your local network IP address>/mjpeg/1
