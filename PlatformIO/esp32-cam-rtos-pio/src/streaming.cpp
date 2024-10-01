@@ -13,6 +13,8 @@ volatile uint32_t frameNumber;
 frameChunck_t* fstFrame = NULL;  // first frame
 frameChunck_t* curFrame = NULL;  // current frame being captured by the camera
 
+const char*  STREAMING_URL = "/mjpeg/1";
+
 void mjpegCB(void* pvParameters) {
   TickType_t xLastWakeTime;
   const TickType_t xFrequency = pdMS_TO_TICKS(WSINTERVAL);
@@ -24,16 +26,16 @@ void mjpegCB(void* pvParameters) {
 
   //  Creating RTOS task for grabbing frames from the camera
   xTaskCreatePinnedToCore(
-    camCB,        // callback
-    "cam",        // name
-    4096,         // stacj size
-    NULL,         // parameters
-    2,            // priority
-    &tCam,        // RTOS task handle
-    APP_CPU);     // core
+      camCB,        // callback
+      "cam",        // name
+      4 * KILOBYTE, // stack size
+      NULL,         // parameters
+      tskIDLE_PRIORITY + 2, // priority
+      &tCam,        // RTOS task handle
+      APP_CPU);     // core
 
   //  Registering webserver handling routines
-  server.on("/mjpeg/1", HTTP_GET, handleJPGSstream);
+  server.on(STREAMING_URL, HTTP_GET, handleJPGSstream);
   server.onNotFound(handleNotFound);
 
   //  Starting webserver
@@ -54,6 +56,13 @@ void mjpegCB(void* pvParameters) {
 
 
 // ==== Memory allocator that takes advantage of PSRAM if present =======================
+char* allocatePSRAM(size_t aSize) {
+  if ( psramFound() && ESP.getFreePsram() > aSize ) {
+    return (char*) ps_malloc(aSize);
+  }
+  return NULL;
+}
+
 char* allocateMemory(char* aPtr, size_t aSize, bool fail, bool psramOnly) {
 
   //  Since current buffer is too smal, free it
@@ -65,25 +74,19 @@ char* allocateMemory(char* aPtr, size_t aSize, bool fail, bool psramOnly) {
   char* ptr = NULL;
 
   if ( psramOnly ) {
-    if ( psramFound() && ESP.getFreePsram() > aSize ) {
-      ptr = (char*) ps_malloc(aSize);
-    }
+    ptr = allocatePSRAM(aSize);
   }
   else {
     // If memory requested is more than 2/3 of the currently free heap, try PSRAM immediately
     if ( aSize > ESP.getFreeHeap() * 2 / 3 ) {
-      if ( psramFound() && ESP.getFreePsram() > aSize ) {
-        ptr = (char*) ps_malloc(aSize);
-      }
+      ptr = allocatePSRAM(aSize);
     }
     else {
       //  Enough free heap - let's try allocating fast RAM as a buffer
       ptr = (char*) malloc(aSize);
 
       //  If allocation on the heap failed, let's give PSRAM one more chance:
-      if ( ptr == NULL && psramFound() && ESP.getFreePsram() > aSize) {
-        ptr = (char*) ps_malloc(aSize);
-      }
+      if ( ptr == NULL ) ptr = allocatePSRAM(aSize);
     }
   }
   // Finally, if the memory pointer is NULL, we were not able to allocate any memory, and that is a terminal condition.
@@ -93,5 +96,19 @@ char* allocateMemory(char* aPtr, size_t aSize, bool fail, bool psramOnly) {
     ESP.restart();
   }
   return ptr;
+}
+
+
+// ==== Handle invalid URL requests ============================================
+void handleNotFound() {
+  String message = "Server is running!\n\n";
+  message += "URI: ";
+  message += server.uri();
+  message += "\nMethod: ";
+  message += (server.method() == HTTP_GET) ? "GET" : "POST";
+  message += "\nArguments: ";
+  message += server.args();
+  message += "\n";
+  server.send(200, "text / plain", message);
 }
 

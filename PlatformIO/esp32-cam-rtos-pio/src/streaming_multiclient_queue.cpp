@@ -29,10 +29,10 @@ void camCB(void* pvParameters) {
   //  Creating task to push the stream to all connected clients
   xTaskCreatePinnedToCore(
     streamCB,
-    "strmCB",
-    4096,
+    "streamCB",
+    4 * KILOBYTE,
     NULL, //(void*) handler,
-    2,
+    tskIDLE_PRIORITY + 2,
     &tStream,
     APP_CPU);
     // PRO_CPU);

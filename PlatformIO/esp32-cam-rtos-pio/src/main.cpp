@@ -13,18 +13,7 @@
 
 #include "definitions.h"
 #include "references.h"
-#include "logging.h"
 
-#include "esp_camera.h"
-#include "ov2640.h"
-#include <WiFi.h>
-#include <WiFiClient.h>
-#include <WifiManager.h>
-#include <vector>
-
-#include <esp_wifi.h>
-#include <esp_sleep.h>
-#include <driver/rtc_io.h>
 
 #include "credentials.h"
 #include "streaming.h"
@@ -51,40 +40,21 @@ uint8_t      noActiveClients;   // number of active clients
 // frameSync semaphore is used to prevent streaming buffer as it is replaced with the next frame
 SemaphoreHandle_t frameSync = NULL;
 
-void handleNotFound();
-
-
-// ==== Handle invalid URL requests ============================================
-void handleNotFound()
-{
-  String message = "Server is running!\n\n";
-  message += "URI: ";
-  message += server.uri();
-  message += "\nMethod: ";
-  message += (server.method() == HTTP_GET) ? "GET" : "POST";
-  message += "\nArguments: ";
-  message += server.args();
-  message += "\n";
-  server.send(200, "text / plain", message);
-}
-
-
 
 // ==== SETUP method ==================================================================
-void setup()
-{
+void setup() {
 
   // Setup Serial connection:
-  Serial.begin(115200);
+  Serial.begin(SERIAL_RATE);
   delay(500); // wait for a bit to let Serial connect
 
   setupLogging();
 
   Log.trace("\n\nMulti-client MJPEG Server\n");
-  Log.trace("setup: total heap : %d\n", ESP.getHeapSize());
-  Log.trace("setup: free heap  : %d\n", ESP.getFreeHeap());
-  Log.trace("setup: free psram : %d\n", ESP.getPsramSize());
-  Log.trace("setup: free psram : %d\n", ESP.getFreePsram());
+  Log.trace("setup: total heap  : %d\n", ESP.getHeapSize());
+  Log.trace("setup: free heap   : %d\n", ESP.getFreeHeap());
+  Log.trace("setup: total psram : %d\n", ESP.getPsramSize());
+  Log.trace("setup: free psram  : %d\n", ESP.getFreePsram());
 
   static camera_config_t camera_config = {
     .pin_pwdn       = PWDN_GPIO_NUM,
@@ -104,8 +74,7 @@ void setup()
     .pin_href       = HREF_GPIO_NUM,
     .pin_pclk       = PCLK_GPIO_NUM,
 
-    // .xclk_freq_hz   = 16000000,
-    .xclk_freq_hz   = 20000000,
+    .xclk_freq_hz   = XCLK_FREQ,
     .ledc_timer     = LEDC_TIMER_0,
     .ledc_channel   = LEDC_CHANNEL_0,
     .pixel_format   = PIXFORMAT_JPEG,
@@ -160,15 +129,15 @@ void setup()
   ip = WiFi.localIP();
   Log.verbose(F("setup: WiFi connected\n"));
   // Log.verbose("Stream Link: http://%S/mjpeg/1\n\n", ip.toString());
-  Serial.printf("Stream Link: http://%s/mjpeg/1\n\n", ip.toString().c_str());
+  Serial.printf("Stream Link: http://%s%s\n\n", ip.toString().c_str(), STREAMING_URL);
 
   // Start main streaming RTOS task
   xTaskCreatePinnedToCore(
     mjpegCB,
     "mjpeg",
-    3 * 1024,
+    3 * KILOBYTE,
     NULL,
-    2,
+    tskIDLE_PRIORITY + 2,
     &tMjpeg,
     PRO_CPU);
 

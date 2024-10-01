@@ -2,8 +2,6 @@
 #include "definitions.h"
 #include "references.h"
 
-#include "esp_camera.h"
-
 typedef struct {
   uint32_t        frame;
   WiFiClient      *client;
@@ -23,6 +21,7 @@ typedef struct {
 
 void camCB(void* pvParameters);
 void handleJPGSstream(void);
+void handleNotFound(void);
 void streamCB(void * pvParameters);
 void mjpegCB(void * pvParameters);
 

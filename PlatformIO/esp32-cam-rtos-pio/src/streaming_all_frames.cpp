@@ -140,9 +140,9 @@ void handleJPGSstream(void)
   int rc = xTaskCreatePinnedToCore(
              streamCB,
              "streamCB",
-             3 * 1024,
+             3 * KILOBYTE,
              (void*) info,
-             2,
+             tskIDLE_PRIORITY + 2,
              &info->task,
              APP_CPU);
   if ( rc != pdPASS ) {

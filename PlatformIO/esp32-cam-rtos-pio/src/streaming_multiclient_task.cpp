@@ -133,10 +133,10 @@ void handleJPGSstream(void)
   //  Creating task to push the stream to all connected clients
   int rc = xTaskCreatePinnedToCore(
              streamCB,
-             "strmCB",
-             3 * 1024,
+             "streamCB",
+             3 * KILOBYTE,
              (void*) info,
-             2,
+             tskIDLE_PRIORITY + 2,
              &info->task,
              APP_CPU);
   if ( rc != pdPASS ) {
