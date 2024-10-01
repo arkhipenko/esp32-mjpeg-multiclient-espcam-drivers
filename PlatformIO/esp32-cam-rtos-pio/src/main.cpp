@@ -111,7 +111,7 @@ void setup()
     .pixel_format   = PIXFORMAT_JPEG,
     .frame_size     = FRAME_SIZE,
     .jpeg_quality   = JPEG_QUALITY,
-    .fb_count       = 1, //2,
+    .fb_count       = 2,
     .fb_location = CAMERA_FB_IN_DRAM,
     .grab_mode = CAMERA_GRAB_LATEST,
     // .sccb_i2c_port = -1

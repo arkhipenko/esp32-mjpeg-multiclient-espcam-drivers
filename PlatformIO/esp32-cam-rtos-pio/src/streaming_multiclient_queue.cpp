@@ -223,8 +223,6 @@ void streamCB(void * pvParameters) {
 
 #if defined (BENCHMARK)
           streamAvg.value(micros()-streamStart);
-          fpsAvg.value(1000.0 / (float) (millis()-lastFrame) );
-          lastFrame = millis();
 #endif
 
           //  The frame has been served. Release the semaphore and let other tasks run.
@@ -244,6 +242,11 @@ void streamCB(void * pvParameters) {
     }
     //  Let other tasks run after serving every client
     if ( xTaskDelayUntil(&xLastWakeTime, xFrequency) != pdTRUE ) taskYIELD();
+
+#if defined (BENCHMARK)
+    fpsAvg.value(1000.0 / (float) (millis()-lastFrame) );
+    lastFrame = millis();
+#endif
 
 #if defined (BENCHMARK)
     if ( millis() - lastPrint > BENCHMARK_PRINT_INT ) {

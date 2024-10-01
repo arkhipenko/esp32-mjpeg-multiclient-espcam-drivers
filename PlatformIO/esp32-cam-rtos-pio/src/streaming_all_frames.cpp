@@ -212,8 +212,6 @@ void streamCB(void * pvParameters) {
 
 #if defined (BENCHMARK)
         streamAvg.value(micros()-streamStart);
-        fpsAvg.value(1000.0 / (float) (millis()-lastFrame) );
-        lastFrame = millis();
         streamStart = micros();
 #endif
 
@@ -260,7 +258,11 @@ void streamCB(void * pvParameters) {
     //  Let other tasks run after serving every client
     if ( xTaskDelayUntil(&xLastWakeTime, xFrequency) != pdTRUE ) taskYIELD();
 
+
 #if defined (BENCHMARK)
+        fpsAvg.value(1000.0 / (float) (millis()-lastFrame) );
+        lastFrame = millis();
+
     if ( millis() - lastPrint > BENCHMARK_PRINT_INT ) {
       lastPrint = millis();
       Log.verbose("streamCB: wait avg=%d, stream avg=%d us, frame avg size=%d bytes, fps=%S\n", waitAvg.currentValue(), streamAvg.currentValue(), frameAvg.currentValue(), String(fpsAvg.currentValue()));
