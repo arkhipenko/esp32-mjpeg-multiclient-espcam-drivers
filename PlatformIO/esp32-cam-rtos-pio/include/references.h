@@ -8,7 +8,7 @@
 #include "ov2640.h"
 #include <WiFi.h>
 #include <WiFiClient.h>
-#include <WifiManager.h>
+#include <WiFiManager.h>
 #include <vector>
 
 #include <esp_wifi.h>
