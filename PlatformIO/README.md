@@ -26,9 +26,9 @@
 
 ### Quick start
 
-Pull the repo recursively in order to include the latest esp32-camera drivers. 
+Pull the repo. 
 
-`git clone --recurse-submodules https://github.com/arkhipenko/esp32-mjpeg-multiclient-espcam-drivers.git`
+`git clone https://github.com/arkhipenko/esp32-mjpeg-multiclient-espcam-drivers.git`
 
 Open workspace file `esp32-cam-rtos-pio\esp32-cam-rtos-pio.code-workspace` with MS VSCode
 
